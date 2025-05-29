@@ -4,6 +4,7 @@ import './App.css'
 import Header from './components/Header.jsx'
 import BookHero from './components/BookHero.jsx'
 import Cart from './components/Cart.jsx'
+import ExploreBooks from './components/ExploreBooks.jsx'
 
 function App() {
   const [searchResults, setSearchResults] = useState(null);
@@ -76,6 +77,11 @@ function App() {
             <BookHero 
               searchResults={searchResults} 
               onSearchResults={setSearchResults}
+              onAddToCart={addToCart}
+            />
+          } />
+          <Route path="/explore" element={
+            <ExploreBooks 
               onAddToCart={addToCart}
             />
           } />

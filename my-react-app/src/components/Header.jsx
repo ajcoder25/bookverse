@@ -183,7 +183,7 @@ const Header = ({ onSearchResults, cartCount = 0 }) => {
           <div className="absolute top-full left-0 right-0 bg-white border-b md:hidden">
             <nav className="px-4 py-2">
               <Link to="/" className="block py-2 px-4 text-sm hover:bg-gray-100 rounded-lg">Home</Link>
-              <Link to="/" className="block py-2 px-4 text-sm hover:bg-gray-100 rounded-lg">Explore Books</Link>
+              <Link to="/explore" className="block py-2 px-4 text-sm hover:bg-gray-100 rounded-lg">Explore Books</Link>
               <Link to="/cart" className="block py-2 px-4 text-sm hover:bg-gray-100 rounded-lg">Cart</Link>
             </nav>
           </div>
@@ -194,7 +194,7 @@ const Header = ({ onSearchResults, cartCount = 0 }) => {
           <Link to="/" className="px-4 py-2 text-sm rounded-lg hover:bg-gray-100">
             Home
           </Link>
-          <Link to="/" className="px-4 py-2 text-sm rounded-lg hover:bg-gray-100">
+          <Link to="/explore" className="px-4 py-2 text-sm rounded-lg hover:bg-gray-100">
             Explore Books
           </Link>
         </div>

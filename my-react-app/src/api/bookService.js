@@ -156,6 +156,45 @@ const bookService = {
   getBooks: async () => {
     // Default to featured books if no specific category is selected
     return bookService.getFeaturedBooks();
+  },
+  
+  getBooksByCategory: async (category) => {
+    try {
+      // For category-based search
+      const response = await fetch(
+        `https://www.googleapis.com/books/v1/volumes?q=subject:${encodeURIComponent(category.toLowerCase())}&orderBy=relevance&key=${API_KEY}&maxResults=16`
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      
+      // Format the response to match what the component expects
+      return {
+        data: {
+          products: data.items ? data.items.map(book => ({
+            _id: book.id,
+            title: book.volumeInfo?.title || "Unknown Title",
+            description: book.volumeInfo?.description 
+              ? book.volumeInfo.description.substring(0, 150) + "..."
+              : book.volumeInfo?.authors 
+                ? `By ${book.volumeInfo.authors.join(", ")}`
+                : "No description available",
+            price: book.saleInfo?.retailPrice?.amount || 29.99,
+            originalPrice: book.saleInfo?.listPrice?.amount || 39.99,
+            image: book.volumeInfo?.imageLinks?.thumbnail || 
+                  book.volumeInfo?.imageLinks?.smallThumbnail || 
+                  "https://via.placeholder.com/128x192.png?text=No+Cover",
+            author: book.volumeInfo?.authors ? book.volumeInfo.authors.join(", ") : "Unknown Author",
+            pages: book.volumeInfo?.pageCount || "Unknown",
+            category: category
+          })) : []
+        }
+      };
+    } catch (error) {
+      console.error(`Error fetching ${category} books:`, error);
+      throw error;
+    }
   }
 };
 
