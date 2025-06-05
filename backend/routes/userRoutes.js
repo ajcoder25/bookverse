@@ -1,9 +1,16 @@
 const express = require("express");
 const router = express.Router();
+const {
+  registerUser,
+  loginUser,
+  getMe,
+  updateProfile,
+} = require("../controllers/userController");
+const { protect } = require("../middleware/authMiddleware");
 
-// Example placeholder route for users
-router.get("/", (req, res) => {
-  res.json({ message: "User route is working!" });
-});
+router.post("/", registerUser);
+router.post("/login", loginUser);
+router.get("/me", protect, getMe);
+router.put("/profile", protect, updateProfile);
 
 module.exports = router;
