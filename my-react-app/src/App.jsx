@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
-import Header from './components/Header.jsx'
 import BookHero from './components/BookHero.jsx'
 import Cart from './components/Cart.jsx'
 import ExploreBooks from './components/ExploreBooks.jsx'

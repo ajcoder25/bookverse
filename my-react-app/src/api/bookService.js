@@ -1,4 +1,8 @@
-const API_KEY = 'AIzaSyDNYMX2nJ6oKKzGkR8ZWMamIKD2PTq67Sw';
+// Base URL for the backend API
+const API_BASE_URL = 'http://localhost:5000/api';
+
+// Google Books API Key - make sure to replace with your actual key
+const API_KEY = 'YOUR_GOOGLE_BOOKS_API_KEY';
 
 const bookService = {
   searchBooks: async (query, limit = 12) => {
@@ -6,8 +10,9 @@ const bookService = {
       // Normalize the query but keep original for more accurate results
       const normalizedQuery = query.trim();
       
+      // Use the external-books endpoint which is already set up in the backend
       const response = await fetch(
-        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(normalizedQuery)}&key=${API_KEY}&maxResults=${limit}`
+        `${API_BASE_URL}/external-books/google?q=${encodeURIComponent(normalizedQuery)}&maxResults=${limit}`
       );
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
