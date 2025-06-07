@@ -116,7 +116,7 @@ const ProductList = ({ onAddToCart, onAddToWishlist }) => {
         {books.map((book) => (
           <BackgroundGradient key={book.id} className="group rounded-xl">
             <div className="h-full bg-white rounded-xl p-4 flex flex-col">
-              <Link to={`/book/${book.id}`} className="flex-grow">
+              <Link to={`/product/${book.id}`} className="flex-grow">
                   <div className="relative aspect-[3/4] mb-4 overflow-hidden rounded-lg">
                     <img
                       src={book.image || imageUtils.getRandomFallbackImage()}

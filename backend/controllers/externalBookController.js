@@ -3,12 +3,11 @@ const path = require('path');
 
 // Read .env file directly
 const envPath = path.resolve(__dirname, '../.env');
-console.log('Reading .env from:', envPath);
+
 
 try {
   const envFile = fs.readFileSync(envPath, 'utf8');
-  console.log('Raw .env content:', envFile);
-  
+
   // Parse the .env file manually
   const envVars = envFile.split('\n').reduce((acc, line) => {
     const match = line.match(/^([^=]+)=(.*)$/);
@@ -17,15 +16,12 @@ try {
     }
     return acc;
   }, {});
-  
   // Set environment variables manually
   process.env = { ...process.env, ...envVars };
-  
-  console.log('Environment variables set:', Object.keys(envVars).join(', '));
-  console.log('GOOGLE_BOOKS_API_KEY exists:', !!process.env.GOOGLE_BOOKS_API_KEY);
 } catch (error) {
-  console.error('Error reading .env file:', error);
+  console.error('Failed to read or parse .env file:', error);
 }
+
 
 const axios = require("axios");
 const config = require("../config");
@@ -43,7 +39,7 @@ const fetchGoogleBooks = async (req, res) => {
       orderBy = "relevance", // Sort order (relevance or newest)
       filter,             // Filter (partial, full, free-ebooks, paid-ebooks, ebooks)
       langRestrict,       // Language restriction (e.g., 'en')
-      maxResults = 40     // Add maxResults parameter with default
+      maxResults = 40,    // Add maxResults parameter with default
     } = req.query;
 
     if (!q && !category) {

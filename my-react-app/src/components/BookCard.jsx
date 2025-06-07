@@ -1,9 +1,20 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { FaHeart, FaStar, FaShoppingCart } from 'react-icons/fa';
 
-const BookCard = ({ book, onAddToCart, onAddToWishlist }) => {
-  console.log('Rendering BookCard with book:', book);
+import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+
+const BookCard = ({ book, onAddToCart, onAddToWishlist, wishlist = [] }) => {
+  // Wishlist state: is this book in wishlist?
+  const [isWishlisted, setIsWishlisted] = useState(false);
+
+  useEffect(() => {
+    const exists = wishlist.some(
+      (b) => b.id === book.id || b._id === book._id
+    );
+    setIsWishlisted(exists);
+  }, [wishlist, book]);
+
   
   // Helper function to handle image error
   const handleImageError = (e) => {
@@ -90,61 +101,89 @@ const BookCard = ({ book, onAddToCart, onAddToWishlist }) => {
     return generatePlaceholderSVG(volumeInfo?.title || 'Book Title');
   };
 
+  // Log book data for debugging
+  const handleBookClick = (e) => {
+    e.preventDefault();
+    console.log('Book data:', book);
+    // Navigate to the product page
+    window.location.href = `/product/${book.id || book._id || ''}`;
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden flex flex-col h-full">
       <div className="relative h-64 bg-gray-100">
-        <Link to={`/book/${book.id}`} className="block w-full h-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors duration-200">
-          <div className="relative w-full h-full flex items-center justify-center p-2">
-            <div className="relative w-full h-full flex items-center justify-center">
-              <img
-                src={getBookCover()}
-                alt={volumeInfo.title || 'Book Cover'}
-                className="w-full h-full object-contain"
-                style={{
-                  maxHeight: '280px',
-                  width: 'auto',
-                  height: 'auto',
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                  backgroundColor: '#f8f9fa'
-                }}
-                onError={(e) => {
-                  // If image fails to load, try the small thumbnail
-                  if (imageLinks?.smallThumbnail && e.target.src !== imageLinks.smallThumbnail) {
-                    e.target.src = imageLinks.smallThumbnail;
-                  } else {
-                    // If still fails, generate an SVG placeholder
-                    e.target.src = generatePlaceholderSVG(volumeInfo?.title);
-                  }
-                }}
-                loading="lazy"
-              />
-              {(!imageLinks?.thumbnail && !imageLinks?.smallThumbnail) && (
-                <div className="absolute inset-0 flex items-center justify-center text-center p-4 text-gray-500 text-sm">
-                  Cover not available
-                </div>
-              )}
+        <div className="relative w-full h-full">
+          {/* Book Cover Image */}
+          <div 
+            onClick={handleBookClick}
+            className="block w-full h-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors duration-200 cursor-pointer"
+          >
+            <div className="relative w-full h-full flex items-center justify-center p-2">
+              <div className="relative w-full h-full flex items-center justify-center">
+                <img
+                  src={getBookCover()}
+                  alt={volumeInfo.title || 'Book Cover'}
+                  className="w-full h-full object-contain"
+                  style={{
+                    maxHeight: '280px',
+                    width: 'auto',
+                    height: 'auto',
+                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                    backgroundColor: '#f8f9fa'
+                  }}
+                  onError={(e) => {
+                    // If image fails to load, try the small thumbnail
+                    if (imageLinks?.smallThumbnail && e.target.src !== imageLinks.smallThumbnail) {
+                      e.target.src = imageLinks.smallThumbnail;
+                    } else {
+                      // If still fails, generate an SVG placeholder
+                      e.target.src = generatePlaceholderSVG(volumeInfo?.title);
+                    }
+                  }}
+                  loading="lazy"
+                />
+                {(!imageLinks?.thumbnail && !imageLinks?.smallThumbnail) && (
+                  <div className="absolute inset-0 flex items-center justify-center text-center p-4 text-gray-500 text-sm">
+                    Cover not available
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </Link>
-        <button 
-          className="absolute top-2 right-2 bg-white rounded-full p-2 shadow-md hover:bg-red-50 transition-colors z-10"
-          onClick={(e) => {
-            e.preventDefault();
-            onAddToWishlist(book.id);
-          }}
-          aria-label="Add to wishlist"
-        >
-          <FaHeart className="text-gray-400 hover:text-red-500" />
-        </button>
-        {discount > 0 && discount < 100 && (
-          <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-            {discount}% OFF
-          </div>
-        )}
+          
+          {/* Wishlist Button */}
+          <button 
+            className={`absolute top-2 right-2 bg-white rounded-full p-2 shadow-md transition-colors z-10 ${isWishlisted ? 'bg-red-50' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isWishlisted) {
+                // Remove from wishlist
+                onAddToWishlist(book, 'remove');
+                setIsWishlisted(false);
+                toast('Removed from wishlist', { icon: '💔', position: 'top-center' });
+              } else {
+                // Add to wishlist
+                onAddToWishlist(book, 'add');
+                setIsWishlisted(true);
+                toast('💖 Added to wishlist', { icon: '💖', position: 'top-center' });
+              }
+            }}
+            aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          >
+            <FaHeart className={isWishlisted ? 'text-red-500' : 'text-gray-400 hover:text-red-500'} />
+          </button>
+          
+          {/* Discount Badge */}
+          {discount > 0 && discount < 100 && (
+            <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
+              {discount}% OFF
+            </div>
+          )}
+        </div>
       </div>
       
       <div className="p-4 flex flex-col flex-grow">
-        <Link to={`/book/${book.id}`} className="block flex-grow">
+        <div onClick={handleBookClick} className="block flex-grow cursor-pointer">
           <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-2">
             {book.volumeInfo?.title || 'Untitled'}
           </h3>
@@ -170,34 +209,38 @@ const BookCard = ({ book, onAddToCart, onAddToWishlist }) => {
               {truncateText(book.volumeInfo.description, 100)}
             </p>
           )}
-        </Link>
+        </div>
 
         {/* Price and Rating */}
         <div className="mt-2 flex items-center justify-between">
-          <div>
-            <span className="text-lg font-bold text-gray-900">{formatPrice(salePriceAmount)}</span>
-            {listPriceAmount > salePriceAmount && (
-              <span className="ml-2 text-sm text-gray-500 line-through">
-                {formatPrice(listPriceAmount)}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center">
-            <FaStar className="text-yellow-400" />
-            <span className="ml-1 text-sm text-gray-600">
-              {typeof book.volumeInfo?.averageRating === 'number' ? book.volumeInfo.averageRating.toFixed(1) : '4.5'}
+          <span className="text-lg font-bold text-gray-900">{formatPrice(salePriceAmount)}</span>
+          {listPriceAmount > salePriceAmount && (
+            <span className="ml-2 text-sm text-gray-500 line-through">
+              {formatPrice(listPriceAmount)}
             </span>
-          </div>
+          )}
         </div>
-        
+
         {/* Add to Cart Button */}
         <div className="mt-3">
           <button
-            onClick={(e) => {
+            onClick={async (e) => {
               e.preventDefault();
-              onAddToCart(book.id);
+              // Map book object to backend cart schema
+              const mappedBook = {
+                bookId: book.id || book._id,
+                title: book.volumeInfo?.title || book.title,
+                author: (book.volumeInfo?.authors && book.volumeInfo.authors[0]) || book.author || 'Unknown Author',
+                image: (book.volumeInfo?.imageLinks?.thumbnail || book.image || ''),
+                price: book.price || salePriceAmount || 299, // fallback price
+                quantity: 1
+              };
+              const result = await onAddToCart(mappedBook);
+              if (result && result.success) {
+                toast.success('📚 Book successfully added to cart!', { position: 'top-center' });
+              }
             }}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors flex items-center justify-center"
+            className="w-full bg-black hover:bg-gray-900 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors flex items-center justify-center font-sans"
           >
             <FaShoppingCart className="mr-2" />
             Add to Cart

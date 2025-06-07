@@ -1,18 +1,51 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from '../api/apiConfig';
-import { cartService } from '../services/cartService';
 import imageUtils from '../utils/imageUtils';
+import { useCart } from '../context/CartContext';
+import { cartService } from '../services/cartService';
 
-
-const Cart = ({ cartItems, removeFromCart, setCartItems, updateCartCount }) => {
+const Cart = () => {
   const navigate = useNavigate();
+  const { 
+    cartItems, 
+    setCartItems,
+    removeFromCart, 
+    updateQuantity, 
+    getCartTotal, 
+    getCartCount, 
+    updateCart, 
+    clearCart,
+    loading: cartLoading,
+    placeOrder // <-- fix for placeOrder is not defined
+  } = useCart();
+  
+  const getTotal = getCartTotal; // Alias for backward compatibility
+  
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [addresses, setAddresses] = useState([]);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Place order handler
+  const handlePlaceOrder = async () => {
+    setIsLoading(true);
+    setError('');
+    setSuccessMessage('');
+    try {
+      if (!selectedAddress) throw new Error('Please select a delivery address.');
+      const result = await placeOrder(selectedAddress);
+      clearCart();
+      setSuccessMessage('Order placed successfully! You can track it in your profile.');
+    } catch (error) {
+      setError(error.message || 'Failed to place order.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const [newAddress, setNewAddress] = useState({
     streetAddress: '',
     city: '',
@@ -22,54 +55,49 @@ const Cart = ({ cartItems, removeFromCart, setCartItems, updateCartCount }) => {
     isDefault: false
   });
 
-  useEffect(() => {
+  const fetchAddresses = useCallback(async () => {
     const token = localStorage.getItem('userToken');
-    if (token) {
-      fetchAddresses();
+    if (!token) {
+      setError('Please login to access your addresses');
+      return;
     }
-  }, []);
 
-  const fetchAddresses = async () => {
     try {
-      setError(null); // Clear any previous errors
-      const token = localStorage.getItem('userToken');
-      if (!token) {
-        setError('Please login to access your addresses');
-        return;
-      }
-
+      setIsLoading(true);
+      setError('');
+      
       const response = await axios.get('/addresses', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (response.data && Array.isArray(response.data)) {
         setAddresses(response.data);
-        // If there's no selected address yet, set the default address or the first address
-        if (!selectedAddress && response.data.length > 0) {
-          const defaultAddress = response.data.find(addr => addr.isDefault);
-          setSelectedAddress(defaultAddress || response.data[0]);
-        }
+        // Only update selected address if we don't have one yet
+        setSelectedAddress(prev => prev || response.data.find(addr => addr.isDefault) || null);
       } else {
         throw new Error('Invalid address data received');
       }
     } catch (error) {
       console.error('Error fetching addresses:', error);
+      setAddresses([]);
+      setSelectedAddress(null);
+      
       if (error.response?.status === 401) {
         setError('Please login to view your addresses');
       } else {
         setError('Failed to load addresses. Please try again.');
       }
-      setAddresses([]);
-      setSelectedAddress(null);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchAddresses();
+  }, [fetchAddresses]);
 
   // Calculate subtotal
-  const subtotal = cartItems.reduce((total, item) => {
-    return total + (item.price * item.quantity);
-  }, 0);
+  const subtotal = getTotal();
 
   const handleAddressSubmit = async (e) => {
     e.preventDefault();
@@ -98,66 +126,18 @@ const Cart = ({ cartItems, removeFromCart, setCartItems, updateCartCount }) => {
     }
   };
 
-  const handlePlaceOrder = async () => {
-    if (!selectedAddress) {
-      setError('Please add a delivery address');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const user = JSON.parse(localStorage.getItem('user'));
-      const orderData = {
-        items: cartItems.map(item => ({
-          book: item.id,
-          quantity: item.quantity,
-          price: item.price,
-          title: item.title
-        })),
-        address: selectedAddress,
-        totalAmount: subtotal
-      };
-
-      const token = localStorage.getItem('userToken');
-      if (!token) {
-        setError('Please log in to place an order');
-        setIsLoading(false);
-        sessionStorage.setItem('redirectAfterLogin', '/cart');
-        setTimeout(() => {
-          navigate('/auth');
-        }, 1500);
-        return;
-      }
-
-      const response = await axios.post('/orders', orderData);
-      
-      if (response.data) {
-        setSuccessMessage('Order placed successfully! Thank you for your purchase!');
-        
-        // Clear cart in both backend and frontend
-        await cartService.clearCart();
-        setCartItems([]);
-        updateCartCount([]);
-        localStorage.removeItem('bookCart');
-        
-        setTimeout(() => {
-          navigate('/profile?tab=orders');
-        }, 2000);
-      }
-    } catch (error) {
-      console.error('Error placing order:', error);
-      setError(error.response?.data?.message || 'Error placing order. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setNewAddress(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+    setNewAddress(prev => {
+      const newValue = type === 'checkbox' ? checked : value;
+      // Clear any error when user starts typing
+      if (error) setError('');
+      return {
+        ...prev,
+        [name]: newValue
+      };
+    });
   };
 
   const handleAddressSelection = (address) => {
@@ -166,23 +146,34 @@ const Cart = ({ cartItems, removeFromCart, setCartItems, updateCartCount }) => {
     setError(null); // Clear any existing errors
   };
 
+  // Show loading state
+  if (cartLoading) {
+    return (
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <h1 className="text-3xl font-bold mb-8">Loading Cart...</h1>
+        <div className="animate-pulse space-y-4">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-32 bg-gray-200 rounded"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <h1 className="text-3xl font-bold mb-8">Shopping Cart</h1>
-
+    <div className="container mx-auto px-2 py-4 sm:px-4 sm:py-8">
+      <h2 className="text-2xl font-bold mb-4 sm:mb-6">Shopping Cart</h2>
       {successMessage && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
-          <span className="block sm:inline">{successMessage}</span>
+        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+          {successMessage}
         </div>
       )}
-
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-          <span className="block sm:inline">{error}</span>
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
         </div>
       )}
-
-      {cartItems.length === 0 ? (
+      {(!cartItems || cartItems.length === 0) ? (
         <div className="text-center py-8">
           <p className="text-xl text-gray-600 mb-6">Your cart is empty</p>
           <button
@@ -197,35 +188,102 @@ const Cart = ({ cartItems, removeFromCart, setCartItems, updateCartCount }) => {
           <div className="lg:w-2/3">
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <div className="divide-y divide-gray-200">
-                {cartItems.map((item) => (
-                  <div key={item.id} className="p-6 flex items-start gap-4">
+                {cartItems && cartItems.length > 0 ? cartItems.map((item) => (
+                  <div key={item.id || item._id} className="p-6 flex items-start gap-4">
                     <div className="w-24 h-32 flex-shrink-0">
-                      <img
-                        src={item.image || imageUtils.getRandomFallbackImage()}
-                        alt={item.title}
-                        className="w-full h-full object-cover rounded"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = imageUtils.getRandomFallbackImage();
-                        }}
-                      />
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt={item.title}
+                          className="w-full h-full object-cover rounded"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = imageUtils.getRandomFallbackImage();
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-200 rounded flex items-center justify-center">
+                          <span className="text-gray-400">No image</span>
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1">
                       <h3 className="text-lg font-medium">{item.title}</h3>
                       <p className="text-gray-600">{item.author}</p>
                       <p className="text-gray-600">Quantity: {item.quantity}</p>
                       <div className="flex justify-between items-center mt-4">
-                        <p className="font-medium">₹{item.price.toFixed(2)}</p>
-                        <button
-                          onClick={() => removeFromCart(item.id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          Remove
-                        </button>
+                        <div className="flex items-center space-x-2">
+                          <button 
+                            onClick={() => updateQuantity(item.id || item._id, Math.max(1, item.quantity - 1))}
+                            className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
+                            disabled={isLoading}
+                          >
+                            -
+                          </button>
+                          <span>{item.quantity}</span>
+                          <button 
+                            onClick={() => updateQuantity(item.id || item._id, item.quantity + 1)}
+                            className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
+                            disabled={isLoading}
+                          >
+                            +
+                          </button>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <p className="font-medium">₹{(item.price * item.quantity).toFixed(2)}</p>
+                          <button
+                            onClick={async () => {
+                              setError(null);
+                              setSuccessMessage('');
+                              setIsLoading(true);
+                              
+                              try {
+                                // Get the correct ID from the item, trying different possible ID fields
+                                // Always use the Google Book ID (item.book) if it's a string, otherwise fallback
+                                const itemIdToRemove = typeof item.book === "string" ? item.book : (
+                                  item.book?._id || item.book?.id || item.book?.bookId || item._id || item.id || item.bookId
+                                );
+                                
+                                if (!itemIdToRemove) {
+                                  throw new Error('Cannot remove item: No valid ID found in the item');
+                                }
+                                
+                                // Show loading state
+                                setIsLoading(true);
+                                setError('');
+                                setSuccessMessage('');
+                                
+                                // Try to remove the item
+                                const result = await removeFromCart(itemIdToRemove);
+                                
+                                if (result && result.success) {
+                                  setSuccessMessage('Item removed from cart.');
+                                  // The cart context will handle updating the items
+                                } else if (result && result.requiresRefresh) {
+                                  // If we need to refresh, just let the cart context handle it
+                                  setError('Item removed. Refreshing cart...');
+                                } else {
+                                  throw new Error(result?.error || 'Failed to remove item. Please try again.');
+                                }
+                              } catch (error) {
+                                console.error('Error in remove handler:', error);
+                                setError(error.message || 'Failed to remove item.');
+                              }
+                            }}
+                            className="text-red-600 hover:text-red-800"
+                            disabled={isLoading}
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div className="p-6 text-center">
+                    <p className="text-gray-600">No items in cart</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

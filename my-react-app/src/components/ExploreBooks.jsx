@@ -127,7 +127,7 @@ const ExploreBooks = ({ onAddToCart, onAddToWishlist }) => {
 
   const BookCard = ({ book }) => (
     <div className="flex flex-col items-center bg-white rounded-lg shadow-sm p-4 transition-shadow duration-200 hover:shadow-md">
-      <Link to={`/book/${book.id}`} className="group w-full">
+      <Link to={`/product/${book.id}`} className="group w-full">
         <div className="flex flex-col items-center">
           <img
             src={getBestBookImage(book) || imageUtils.getRandomFallbackImage()}
@@ -142,17 +142,29 @@ const ExploreBooks = ({ onAddToCart, onAddToWishlist }) => {
           <div className="w-full mt-3 text-center">
             <h3 className="font-semibold text-base mb-1 group-hover:text-blue-600 transition-colors line-clamp-2 min-h-[2.5em]">{book.title}</h3>
             <p className="text-xs text-gray-500 mb-1 line-clamp-1">{book.author}</p>
-            <p className="text-xs text-gray-600 mb-2 line-clamp-2 min-h-[2.5em]">{book.description || 'No description available.'}</p>
           </div>
+          <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+            {book.description || book.volumeInfo?.description || 'No description available'}
+          </p>
         </div>
       </Link>
-      <div className="mt-2 flex items-center justify-between w-full">
-        <span className="font-bold text-base">₹{book.price || 798.80}</span>
+      {/* Action Buttons */}
+      <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
+        <button
+          onClick={() => onAddToWishlist(book)}
+          className="bg-white rounded-full p-2 shadow hover:bg-pink-100 transition-colors"
+          aria-label="Add to Wishlist"
+        >
+          <HeartIcon filled={false} />
+        </button>
         <button
           onClick={() => onAddToCart(book)}
-          className="bg-black text-white px-4 py-1 text-sm rounded hover:bg-gray-800 transition-colors"
+          className="bg-blue-600 text-white rounded-full p-2 shadow hover:bg-blue-700 transition-colors"
+          aria-label="Add to Cart"
         >
-          Add to Cart
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437m0 0L7.5 15.75A2.25 2.25 0 009.664 18h7.086a2.25 2.25 0 002.164-1.653l2.014-7.05A1.125 1.125 0 0019.875 7.5H6.272m-1.163 0l-.383-1.437m0 0L4.108 4.835A1.125 1.125 0 015.193 3H2.25m3.75 4.5h13.5" />
+          </svg>
         </button>
       </div>
     </div>

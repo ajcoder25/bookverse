@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import BookCard from './BookCard';
 import bookService from '../services/bookService';
 
-const Home = () => {
+const Home = ({ onAddToCart, onAddToWishlist, wishlist = [] }) => {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -16,17 +16,7 @@ const Home = () => {
     handleCategoryChange(selectedCategory);
   }, [selectedCategory]);
 
-  // Add to cart handler
-  const handleAddToCart = (bookId) => {
-    console.log('Add to cart:', bookId);
-    // Implement cart functionality here
-  };
-
-  // Add to wishlist handler
-  const handleAddToWishlist = (bookId) => {
-    console.log('Add to wishlist:', bookId);
-    // Implement wishlist functionality here
-  };
+  // Remove local handlers, use props
   
   // Add a function to force refresh the data
   const refreshBooks = () => {
@@ -96,7 +86,7 @@ const Home = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Category Filters - Centered */}
         <div className="mb-12 text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Browse by Category</h2>
+          <h2 className="text-2xl font-bold text-black font-sans mb-6">Browse by Category</h2>
           <div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto">
             {categories.map((category) => (
               <button
@@ -104,9 +94,9 @@ const Home = () => {
                 onClick={() => handleCategoryChange(category)}
                 className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${
                   selectedCategory === category
-                    ? 'bg-blue-600 text-white shadow-md transform scale-105'
-                    : 'bg-white text-gray-700 hover:bg-gray-100 hover:shadow-sm'
-                } border border-gray-200`}
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-white text-gray-800 border border-gray-300 hover:bg-blue-50'
+                }`}
               >
                 {category}
               </button>
@@ -158,17 +148,15 @@ const Home = () => {
             
             {books.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {books.map((book) => {
-                  console.log('Rendering book:', book.id, book.volumeInfo?.title);
-                  return (
-                    <BookCard
-                      key={book.id}
-                      book={book}
-                      onAddToCart={() => handleAddToCart(book.id)}
-                      onAddToWishlist={() => handleAddToWishlist(book.id)}
-                    />
-                  );
-                })}
+                {books.map((book) => (
+                  <BookCard
+                    key={book.id || book._id}
+                    book={book}
+                    onAddToCart={onAddToCart}
+                    onAddToWishlist={onAddToWishlist}
+                    wishlist={wishlist}
+                  />
+                ))}
               </div>
             ) : (
               <div className="text-center py-12 bg-white rounded-lg shadow">

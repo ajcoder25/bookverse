@@ -21,11 +21,18 @@ const UserProfile = () => {
       setProfile(JSON.parse(savedProfile));
     }
 
-    // Load orders from localStorage
-    const savedOrders = localStorage.getItem('orders');
-    if (savedOrders) {
-      setOrders(JSON.parse(savedOrders));
+    // Fetch orders from backend
+    async function fetchOrders() {
+      try {
+        const { orderService } = await import('../services/orderService');
+        const backendOrders = await orderService.getMyOrders();
+        setOrders(backendOrders || []);
+      } catch (err) {
+        setOrders([]);
+        console.error('Failed to fetch orders:', err);
+      }
     }
+    fetchOrders();
   }, []);
 
   const handleProfileUpdate = (e) => {
@@ -210,33 +217,35 @@ const UserProfile = () => {
                   <div className="space-y-6">
                     {orders.map((order) => (
                       <div
-                        key={order.id}
+                        key={order._id || order.id}
                         className="border rounded-lg p-4 hover:shadow-lg transition-shadow"
                       >
                         <div className="flex justify-between items-start mb-4">
                           <div>
-                            <p className="font-semibold">Order #{order.id}</p>
+                            <p className="font-semibold">Order #{order._id?.slice(-6) || order.id}</p>
                             <p className="text-sm text-gray-600">
-                              Placed on {formatDate(order.date)}
+                              Placed on {formatDate(order.createdAt)}
                             </p>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-sm ${
-                            order.status === 'Delivered'
+                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                            order.status === 'completed'
                               ? 'bg-green-100 text-green-800'
-                              : order.status === 'Processing'
-                              ? 'bg-blue-100 text-blue-800'
+                              : order.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : order.status === 'cancelled'
+                              ? 'bg-red-100 text-red-800'
                               : 'bg-gray-100 text-gray-800'
                           }`}>
-                            {order.status}
+                            {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
                           </span>
                         </div>
 
                         <div className="space-y-3">
-                          {order.items.map((item) => (
-                            <div key={item.id} className="flex items-center gap-4">
+                          {order.items?.map((item, idx) => (
+                            <div key={item._id || item.id || idx} className="flex items-center gap-4">
                               <img
-                                src={item.image}
-                                alt={item.title}
+                                src={item.image || item.book?.imageLinks?.thumbnail || item.book?.image || 'https://via.placeholder.com/64x80.png?text=No+Cover'}
+                                alt={item.title || item.book?.title || 'Book'}
                                 className="w-16 h-20 object-cover rounded"
                                 onError={(e) => {
                                   e.target.onerror = null;
@@ -244,7 +253,7 @@ const UserProfile = () => {
                                 }}
                               />
                               <div>
-                                <p className="font-medium">{item.title}</p>
+                                <p className="font-medium">{item.title || item.book?.title || 'Unknown Title'}</p>
                                 <p className="text-sm text-gray-600">
                                   Quantity: {item.quantity}
                                 </p>

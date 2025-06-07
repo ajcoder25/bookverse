@@ -1,11 +1,11 @@
 import axios from 'axios';
 
 // Use environment variable for API base URL or default to local development
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_BASE_URL + '/api', // Add /api here to avoid duplication
   withCredentials: false,
   timeout: 15000, // 15 second timeout
   headers: {
@@ -221,11 +221,94 @@ const bookService = {
   // Get book details by ID
   async getBookById(id) {
     try {
-      const response = await api.get(`/external-books/google/${id}`);
-      return transformBookData(response.data);
+      if (!id) {
+        console.error('Book ID is required');
+        throw new Error('Book ID is required');
+      }
+
+      console.log(`Fetching book with ID: ${id}`);
+      const response = await api.get(`/books/${id}`);
+      console.log('API Response:', response.data);
+      
+      // Handle the response structure from our updated backend
+      const responseData = response.data;
+      
+      // Check if the response has an error status
+      if (response.status >= 400) {
+        console.error('API Error Status:', response.status, response.statusText);
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      // Handle case where responseData is already the book object
+      if (responseData && responseData.volumeInfo) {
+        return this.transformBookData(responseData);
+      }
+
+      // Handle our custom API response format
+      if (responseData.success === false) {
+        console.error('API Error:', responseData.error || 'Unknown error');
+        throw new Error(responseData.error || 'Failed to fetch book details');
+      }
+
+      const bookData = responseData.data?.product || responseData;
+      if (!bookData) {
+        console.error('No book data found in response');
+        throw new Error('No book data found in response');
+      }
+
+      // Transform the book data to a consistent format
+      const transformedBook = {
+        ...bookData,
+        _id: bookData._id || bookData.id || id,
+        id: bookData.id || bookData._id || id,
+        // Map Google Books API fields to our expected fields
+        image: bookData.imageLinks?.thumbnail || 
+              bookData.imageLinks?.smallThumbnail || 
+              bookData.image || 
+              'https://via.placeholder.com/300x400?text=No+Image+Available',
+        price: bookData.saleInfo?.retailPrice?.amount || 
+              bookData.saleInfo?.listPrice?.amount || 
+              bookData.price || 
+              0,
+        originalPrice: bookData.saleInfo?.listPrice?.amount || bookData.originalPrice || 0,
+        author: bookData.authors?.[0] || bookData.author || 'Unknown Author',
+        description: bookData.description || 'No description available.',
+        pages: bookData.pageCount || bookData.pages,
+        publishedDate: bookData.publishedDate || 'Unknown',
+        rating: bookData.averageRating || bookData.rating || 0,
+        reviewCount: bookData.ratingsCount || bookData.reviewCount || 0,
+        isNewRelease: bookData.isNewRelease || false,
+        genre: bookData.genre || bookData.categories?.[0] || 'General',
+        publisher: bookData.publisher || 'Unknown Publisher',
+        language: bookData.language || 'en'
+      };
+
+      return transformedBook;
     } catch (error) {
       console.error(`Error fetching book ${id}:`, error);
-      return null;
+      
+      // Return a minimal book object with error information
+      return {
+        _id: id,
+        id: id,
+        title: 'Error Loading Book',
+        author: 'Unknown Author',
+        description: error.message || 'Failed to load book details. Please try again later.',
+        price: 0,
+        originalPrice: 0,
+        rating: 0,
+        reviewCount: 0,
+        image: 'https://via.placeholder.com/300x400?text=Error+Loading+Book',
+        genre: 'Error',
+        pages: 0,
+        publisher: 'Error',
+        isbn: '',
+        language: 'en',
+        publishedDate: '',
+        isNewRelease: false,
+        error: true,
+        errorMessage: error.message || 'Failed to load book details'
+      };
     }
   },
 

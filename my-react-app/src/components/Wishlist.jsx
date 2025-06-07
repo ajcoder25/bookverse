@@ -74,7 +74,7 @@ const Wishlist = ({ onAddToCart, onRemoveFromWishlist }) => {
         {wishlistItems.map((item) => (
           <BackgroundGradient key={item.id} className="bg-white rounded-xl p-6">
             <div className="flex flex-col h-full">
-              <Link to={`/book/${item.id}`} className="group">
+              <Link to={`/product/${item.id}`} className="group">
                 <div className="relative aspect-[3/4] mb-4">
                   <img
                     src={item.image}

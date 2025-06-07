@@ -73,7 +73,7 @@ const BookHero = ({ featuredBooks = [], onAddToCart }) => {
                 {featuredBook.id && (
                   <>
                     <Link
-                      to={`/book/${featuredBook.id}`}
+                      to={`/product/${featuredBook.id}`}
                       className="flex-1 bg-black text-white text-center py-3 px-6 rounded-lg hover:bg-gray-800 transition-colors"
                     >
                       View Details

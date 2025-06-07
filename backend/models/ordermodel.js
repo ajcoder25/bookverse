@@ -9,8 +9,7 @@ const orderSchema = new mongoose.Schema({
   items: [
     {
       book: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Book",
+        type: mongoose.Schema.Types.Mixed, // Accepts ObjectId or string
         required: true,
       },
       quantity: { type: Number, default: 1, min: 1 },
