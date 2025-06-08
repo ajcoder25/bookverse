@@ -1,19 +1,33 @@
 import React from 'react';
 import { FaHeart, FaStar, FaShoppingCart } from 'react-icons/fa';
 
-import { useState, useEffect } from 'react';
+
 import toast from 'react-hot-toast';
 
 const BookCard = ({ book, onAddToCart, onAddToWishlist, wishlist = [] }) => {
-  // Wishlist state: is this book in wishlist?
-  const [isWishlisted, setIsWishlisted] = useState(false);
-
-  useEffect(() => {
-    const exists = wishlist.some(
-      (b) => b.id === book.id || b._id === book._id
+    // Compute wishlist status directly from props for each render
+  // Defensive: compare both id and _id, handle both string and number
+// More robust: check all possible ID fields
+const normalizeId = (id) => (id ? id.toString() : '');
+// Only wishlists the current book by robustly comparing all possible ID fields
+const isWishlisted = wishlist.some(
+  (b) => {
+    const bookId = normalizeId(book.id || book._id || book.bookId);
+    return (
+      normalizeId(b.id) === bookId ||
+      normalizeId(b._id) === bookId ||
+      normalizeId(b.bookId) === bookId ||
+      (b.book && (
+        normalizeId(b.book) === bookId ||
+        normalizeId(b.book.id) === bookId ||
+        normalizeId(b.book._id) === bookId ||
+        normalizeId(b.book.bookId) === bookId
+      ))
     );
-    setIsWishlisted(exists);
-  }, [wishlist, book]);
+  }
+);
+
+
 
   
   // Helper function to handle image error
@@ -157,16 +171,11 @@ const BookCard = ({ book, onAddToCart, onAddToWishlist, wishlist = [] }) => {
             onClick={(e) => {
               e.stopPropagation();
               if (isWishlisted) {
-                // Remove from wishlist
                 onAddToWishlist(book, 'remove');
-                setIsWishlisted(false);
-                toast('Removed from wishlist', { icon: '💔', position: 'top-center' });
               } else {
-                // Add to wishlist
                 onAddToWishlist(book, 'add');
-                setIsWishlisted(true);
-                toast('💖 Added to wishlist', { icon: '💖', position: 'top-center' });
               }
+              // UI will update on prop/state change from parent
             }}
             aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
           >

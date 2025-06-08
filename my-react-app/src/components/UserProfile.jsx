@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BackgroundGradient } from './ui/background-gradient';
+import Footer from './Footer';
 
 const UserProfile = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -64,7 +65,8 @@ const UserProfile = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <div className="flex-1 container mx-auto px-4 py-8">
       {notification && (
         <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg ${
           notification.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
@@ -83,7 +85,7 @@ const UserProfile = () => {
                 className={`w-full text-left px-4 py-2 rounded-lg ${
                   activeTab === 'profile'
                     ? 'bg-black text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    : 'text-gray-700'
                 }`}
               >
                 Profile Information
@@ -93,7 +95,7 @@ const UserProfile = () => {
                 className={`w-full text-left px-4 py-2 rounded-lg ${
                   activeTab === 'orders'
                     ? 'bg-black text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    : 'text-gray-700'
                 }`}
               >
                 Order History
@@ -278,6 +280,8 @@ const UserProfile = () => {
           </BackgroundGradient>
         </div>
       </div>
+      </div>
+     
     </div>
   );
 };

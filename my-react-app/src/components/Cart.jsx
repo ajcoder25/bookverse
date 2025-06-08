@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import Footer from './Footer';
 import { useNavigate } from 'react-router-dom';
 import axios from '../api/apiConfig';
 import imageUtils from '../utils/imageUtils';
@@ -6,26 +7,29 @@ import { useCart } from '../context/CartContext';
 import { cartService } from '../services/cartService';
 
 const Cart = () => {
-  const navigate = useNavigate();
-  const { 
-    cartItems, 
+  const {
+    cartItems,
     setCartItems,
-    removeFromCart, 
-    updateQuantity, 
-    getCartTotal, 
-    getCartCount, 
-    updateCart, 
+    removeFromCart,
+    updateQuantity,
+    getCartTotal,
+    getCartCount,
+    updateCart,
     clearCart,
     loading: cartLoading,
-    placeOrder // <-- fix for placeOrder is not defined
+    placeOrder
   } = useCart();
-  
+  // Debug: log cartItems from context
+  console.log('[Cart.jsx] cartItems from context:', cartItems);
+  const navigate = useNavigate();
+
   const getTotal = getCartTotal; // Alias for backward compatibility
   
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [addresses, setAddresses] = useState([]);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+const [removingItemId, setRemovingItemId] = useState(null);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -161,7 +165,8 @@ const Cart = () => {
   }
 
   return (
-    <div className="container mx-auto px-2 py-4 sm:px-4 sm:py-8">
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <div className="flex-1 container mx-auto px-2 py-4 sm:px-4 sm:py-8">
       <h2 className="text-2xl font-bold mb-4 sm:mb-6">Shopping Cart</h2>
       {successMessage && (
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
@@ -188,8 +193,8 @@ const Cart = () => {
           <div className="lg:w-2/3">
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <div className="divide-y divide-gray-200">
-                {cartItems && cartItems.length > 0 ? cartItems.map((item) => (
-                  <div key={item.id || item._id} className="p-6 flex items-start gap-4">
+                {cartItems && cartItems.length > 0 ? cartItems.map((item, index) => (
+                  <div key={item.bookId || item.id || item._id || index} className="p-6 flex items-start gap-4">
                     <div className="w-24 h-32 flex-shrink-0">
                       {item.image ? (
                         <img
@@ -214,7 +219,7 @@ const Cart = () => {
                       <div className="flex justify-between items-center mt-4">
                         <div className="flex items-center space-x-2">
                           <button 
-                            onClick={() => updateQuantity(item.id || item._id, Math.max(1, item.quantity - 1))}
+                            onClick={() => updateQuantity(item.bookId || item.id || item._id, Math.max(1, item.quantity - 1))}
                             className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
                             disabled={isLoading}
                           >
@@ -222,7 +227,7 @@ const Cart = () => {
                           </button>
                           <span>{item.quantity}</span>
                           <button 
-                            onClick={() => updateQuantity(item.id || item._id, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.bookId || item.id || item._id, item.quantity + 1)}
                             className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
                             disabled={isLoading}
                           >
@@ -235,32 +240,20 @@ const Cart = () => {
                             onClick={async () => {
                               setError(null);
                               setSuccessMessage('');
-                              setIsLoading(true);
-                              
+                              const itemIdToRemove = (
+                                item.bookId || item.id || item._id ||
+                                (typeof item.book === "string" ? item.book : (item.book?._id || item.book?.id || item.book?.bookId))
+                              );
+                              setRemovingItemId(itemIdToRemove);
                               try {
-                                // Get the correct ID from the item, trying different possible ID fields
-                                // Always use the Google Book ID (item.book) if it's a string, otherwise fallback
-                                const itemIdToRemove = typeof item.book === "string" ? item.book : (
-                                  item.book?._id || item.book?.id || item.book?.bookId || item._id || item.id || item.bookId
-                                );
-                                
                                 if (!itemIdToRemove) {
                                   throw new Error('Cannot remove item: No valid ID found in the item');
                                 }
-                                
-                                // Show loading state
-                                setIsLoading(true);
-                                setError('');
-                                setSuccessMessage('');
-                                
                                 // Try to remove the item
                                 const result = await removeFromCart(itemIdToRemove);
-                                
                                 if (result && result.success) {
                                   setSuccessMessage('Item removed from cart.');
-                                  // The cart context will handle updating the items
                                 } else if (result && result.requiresRefresh) {
-                                  // If we need to refresh, just let the cart context handle it
                                   setError('Item removed. Refreshing cart...');
                                 } else {
                                   throw new Error(result?.error || 'Failed to remove item. Please try again.');
@@ -268,10 +261,12 @@ const Cart = () => {
                               } catch (error) {
                                 console.error('Error in remove handler:', error);
                                 setError(error.message || 'Failed to remove item.');
+                              } finally {
+                                setRemovingItemId(null);
                               }
                             }}
                             className="text-red-600 hover:text-red-800"
-                            disabled={isLoading}
+                            disabled={isLoading || removingItemId === (item.bookId || item.id || item._id || (typeof item.book === "string" ? item.book : (item.book?._id || item.book?.id || item.book?.bookId)))}
                           >
                             Remove
                           </button>
@@ -485,6 +480,8 @@ const Cart = () => {
           </div>
         </div>
       )}
+      </div>
+      <Footer />
     </div>
   );
 };

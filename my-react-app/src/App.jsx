@@ -33,48 +33,31 @@ import toast from 'react-hot-toast';
 
 function App() {
   const [searchResults, setSearchResults] = useState(null);
-  const [cartItems, setCartItems] = useState([]);
-  const [cartCount, setCartCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [wishlist, setWishlist] = useState([]);
   const [notification, setNotification] = useState(null);
   const [featuredBooks, setFeaturedBooks] = useState([]);
 
-  // Add to Cart handler
-  const handleAddToCart = async (book) => {
-    try {
-      // Add to cart in local storage (simulate API)
-      await cartService.addToCart({
-        ...book,
-        quantity: book.quantity || 1
-      });
-      // Get updated cart from localStorage and update count
-      const cartArr = JSON.parse(localStorage.getItem('cart')) || [];
-      const totalItems = cartArr.reduce((sum, item) => sum + (item.quantity || 1), 0);
-      setCartCount(totalItems);
-      toast.success('Added to cart!', { position: 'top-center' });
-    } catch (err) {
-      toast.error('Failed to add to cart.');
-    }
-  };
-
   // Add to Wishlist handler
+  // Optimized: update React state first for instant UI feedback, then localStorage
   const handleAddToWishlist = (book, action) => {
     try {
-      let wishlistArr = JSON.parse(localStorage.getItem('wishlist')) || [];
-      const exists = wishlistArr.find((b) => b.id === book.id || b._id === book._id);
+      let wishlistArr = [...wishlist]; // use current React state for instant update
+      const normalizeId = (id) => (id ? id.toString() : '');
+      // Robustly match any possible ID field
+      const getBookId = (obj) => normalizeId(obj.id || obj._id || obj.bookId || (obj.book && (obj.book.id || obj.book._id || obj.book.bookId || obj.book)));
+      const isMatch = (a, b) => getBookId(a) === getBookId(b);
+      const exists = wishlistArr.find((b2) => isMatch(b2, book));
       if (action === 'remove' && exists) {
-        wishlistArr = wishlistArr.filter((b) => b.id !== book.id && b._id !== book._id);
-        localStorage.setItem('wishlist', JSON.stringify(wishlistArr));
-        setWishlist(wishlistArr);
+        const updated = wishlistArr.filter((b2) => !isMatch(b2, book));
+        setWishlist(updated); // update UI immediately
+        localStorage.setItem('wishlist', JSON.stringify(updated));
         toast('Removed from wishlist', { icon: '💔', position: 'top-center' });
       } else if ((action === 'add' || !action) && !exists) {
-        wishlistArr.push(book);
-        localStorage.setItem('wishlist', JSON.stringify(wishlistArr));
-        setWishlist(wishlistArr);
+        const updated = [...wishlistArr, book];
+        setWishlist(updated);
+        localStorage.setItem('wishlist', JSON.stringify(updated));
         toast('💖 Added to wishlist', { icon: '💖', position: 'top-center' });
-      } else if (exists) {
-        toast('Already in wishlist!', { icon: '❤️', position: 'top-center' });
       }
     } catch (err) {
       toast.error('Failed to update wishlist.');
@@ -83,13 +66,6 @@ function App() {
 
   // Load featured books
   useEffect(() => {
-    // Load cart and wishlist counts from localStorage on mount
-    const cartArr = JSON.parse(localStorage.getItem('cart')) || [];
-    const totalItems = cartArr.reduce((sum, item) => sum + (item.quantity || 1), 0);
-    setCartCount(totalItems);
-    const wishlistArr = JSON.parse(localStorage.getItem('wishlist')) || [];
-    setWishlist(wishlistArr);
-
     const loadFeaturedBooks = async () => {
       try {
         const response = await bookService.getFeaturedBooks();
@@ -108,7 +84,7 @@ function App() {
       <Router>
         <div className="App">
           <Toaster position="bottom-center" />
-          <Navbar cartItemCount={cartCount} wishlistItemCount={wishlist.length} />
+          <Navbar wishlistItemCount={wishlist.length} />
           <div className="pb-32">
             <Routes>
               <Route path="/" element={
@@ -147,7 +123,17 @@ function App() {
                 path="/wishlist"
                 element={
                   <ProtectedRoute>
-                    <Wishlist />
+                    <Wishlist 
+                      wishlist={wishlist}
+                      onRemoveFromWishlist={(id) => {
+                        // Remove by id and update App state
+                        let wishlistArr = (JSON.parse(localStorage.getItem('wishlist')) || []).filter(
+                          (b) => b.id !== id && b._id !== id
+                        );
+                        localStorage.setItem('wishlist', JSON.stringify(wishlistArr));
+                        setWishlist(wishlistArr);
+                      }}
+                    />
                   </ProtectedRoute>
                 }
               />

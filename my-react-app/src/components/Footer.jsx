@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 const Footer = () => {
   return (
-    <footer className="bg-gray-900 text-gray-300 fixed bottom-0 left-0 w-full z-50">
+    <footer className="bg-gray-900 text-gray-300 w-full">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* About Section */}
@@ -129,7 +129,7 @@ const Footer = () => {
 
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-gray-800 text-sm text-center">
-          <p>© 2024 BookStore. All rights reserved.</p>
+          <p>© 2025 BookStore. All rights reserved.</p>
         </div>
       </div>
     </footer>

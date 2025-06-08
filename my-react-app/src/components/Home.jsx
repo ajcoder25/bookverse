@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import BookCard from './BookCard';
 import bookService from '../services/bookService';
+import { useCart } from '../context/CartContext';
 
-const Home = ({ onAddToCart, onAddToWishlist, wishlist = [] }) => {
+const Home = ({ onAddToWishlist, wishlist = [] }) => {
+  const { addToCart, cartItems } = useCart();
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -145,34 +147,49 @@ const Home = ({ onAddToCart, onAddToWishlist, wishlist = [] }) => {
             <h2 className="text-2xl font-bold text-gray-900">
               {selectedCategory === 'All' ? 'Featured Books' : `${selectedCategory} Books`}
             </h2>
-            
-            {books.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {books.map((book) => (
-                  <BookCard
-                    key={book.id || book._id}
-                    book={book}
-                    onAddToCart={onAddToCart}
-                    onAddToWishlist={onAddToWishlist}
-                    wishlist={wishlist}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-white rounded-lg shadow">
-                <p className="text-gray-600">No books found in this category.</p>
-                <button
-                  onClick={() => handleCategoryChange(selectedCategory)}
-                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </main>
-    </div>
+             {(() => {
+               // Robustly extract all possible book IDs from cart items
+               const extractBookId = (item) => {
+                 if (!item) return null;
+                 if (typeof item.book === 'string' || typeof item.book === 'number') return String(item.book);
+                 return String(
+                   item.bookId || item.id || item._id ||
+                   (item.book && (item.book._id || item.book.id || item.book.bookId))
+                 );
+               };
+               const cartBookIds = new Set((cartItems || []).map(extractBookId));
+               const visibleBooks = books.filter(book => {
+                 const bookId = String(book.id || book._id || book.bookId);
+                 return !cartBookIds.has(bookId);
+               });
+               return visibleBooks.length > 0 ? (
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                   {visibleBooks.map((book) => (
+                     <BookCard
+                       key={book.id || book._id}
+                       book={book}
+                       onAddToCart={addToCart}
+                       onAddToWishlist={onAddToWishlist}
+                       wishlist={wishlist}
+                     />
+                   ))}
+                 </div>
+               ) : (
+                 <div className="text-center py-12 bg-white rounded-lg shadow">
+                   <p className="text-gray-600">No books found in this category.</p>
+                   <button
+                     onClick={() => handleCategoryChange(selectedCategory)}
+                     className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                   >
+                     Retry
+                   </button>
+                 </div>
+               );
+             })()}
+        </div>
+      )}
+    </main>
+  </div>
   );
 };
 

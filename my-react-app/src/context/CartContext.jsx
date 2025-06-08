@@ -74,6 +74,7 @@ export const CartProvider = ({ children }) => {
 
   // Add to cart with optimistic UI updates and proper sync
   const addToCart = async (item) => {
+    console.log('[CartContext] addToCart called with:', item);
     if (!item.bookId && !item.id && !item._id) {
       throw new Error('Book ID is required');
     }
@@ -93,6 +94,7 @@ export const CartProvider = ({ children }) => {
       author: item.author || 'Unknown Author',
       image: item.image || ''
     };
+    console.log('[CartContext] Sending to backend:', bookToSend);
 
     // Save current state for potential rollback
     const previousItems = [...cartItems];
@@ -145,6 +147,21 @@ export const CartProvider = ({ children }) => {
     return String(id).trim();
   };
 
+  // Helper to extract all possible IDs from a cart item
+  const extractAllIds = (item) => {
+    const ids = [];
+    if (item.bookId) ids.push(normalizeId(item.bookId));
+    if (item.id) ids.push(normalizeId(item.id));
+    if (item._id) ids.push(normalizeId(item._id));
+    if (typeof item.book === 'string' || typeof item.book === 'number') ids.push(normalizeId(item.book));
+    if (item.book && typeof item.book === 'object') {
+      if (item.book._id) ids.push(normalizeId(item.book._id));
+      if (item.book.id) ids.push(normalizeId(item.book.id));
+      if (item.book.bookId) ids.push(normalizeId(item.book.bookId));
+    }
+    return ids;
+  };
+
   // Remove from cart with proper state management
   const removeFromCart = async (bookId) => {
     if (!bookId) {
@@ -161,16 +178,9 @@ export const CartProvider = ({ children }) => {
     
     // Find the item being removed for better error handling
     const itemToRemove = cartItems.find(item => {
-      try {
-        const itemId = typeof item.book === "string"
-          ? normalizeId(item.book)
-          : normalizeId(item.book?._id || item.book?.id || item.book?.bookId || item._id || item.id || item.bookId);
-        return itemId === normalizedBookId;
-      } catch (error) {
-        console.error('Error normalizing item ID during removal:', { item, error });
-        return false;
-      }
-    });
+  const ids = extractAllIds(item);
+  return ids.includes(normalizedBookId);
+});
 
     if (!itemToRemove) {
       const errorMsg = `Item with ID ${normalizedBookId} not found in cart. Current cart items: ${JSON.stringify(
@@ -188,13 +198,12 @@ export const CartProvider = ({ children }) => {
       return { success: false, error: 'Item not found in cart. Please refresh the page and try again.' };
     }
 
+
     // Optimistically remove the item from local state
     const updatedItems = cartItems.filter(item => {
       try {
-        const itemId = typeof item.book === "string"
-          ? normalizeId(item.book)
-          : normalizeId(item.book?._id || item.book?.id || item.book?.bookId || item._id || item.id || item.bookId);
-        return itemId !== normalizedBookId;
+        const ids = extractAllIds(item);
+        return !ids.includes(normalizedBookId);
       } catch (error) {
         console.error('Error normalizing item ID during removal:', { item, error });
         return true; // Keep the item in case of error during normalization
