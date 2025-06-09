@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BackgroundGradient } from './ui/background-gradient';
 import Footer from './Footer';
+import bookService from '../services/bookService';
 
 const UserProfile = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -12,6 +13,8 @@ const UserProfile = () => {
     defaultAddress: ''
   });
   const [orders, setOrders] = useState([]);
+  const [bookDetailsCache, setBookDetailsCache] = useState({});
+  const [ordersLoading, setOrdersLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [notification, setNotification] = useState(null);
 
@@ -24,12 +27,37 @@ const UserProfile = () => {
 
     // Fetch orders from backend
     async function fetchOrders() {
+      setOrdersLoading(true);
       try {
         const { orderService } = await import('../services/orderService');
         const backendOrders = await orderService.getMyOrders();
         setOrders(backendOrders || []);
+        setOrdersLoading(false);
+        // Fetch book details for all order items
+        const bookIds = new Set();
+        (backendOrders || []).forEach(order => {
+          (order.items || []).forEach(item => {
+            // item.book can be id or object
+            if (typeof item.book === 'string' || typeof item.book === 'number') {
+              bookIds.add(item.book);
+            } else if (item.book && (item.book._id || item.book.id)) {
+              bookIds.add(item.book._id || item.book.id);
+            }
+          });
+        });
+        const cache = {};
+        await Promise.all(Array.from(bookIds).map(async id => {
+          try {
+            const book = await bookService.getBookById(id);
+            cache[id] = book;
+          } catch (e) {
+            cache[id] = null;
+          }
+        }));
+        setBookDetailsCache(cache);
       } catch (err) {
         setOrders([]);
+        setOrdersLoading(false);
         console.error('Failed to fetch orders:', err);
       }
     }
@@ -205,7 +233,11 @@ const UserProfile = () => {
             ) : (
               <div>
                 <h2 className="text-2xl font-bold mb-6">Order History</h2>
-                {orders.length === 0 ? (
+                {ordersLoading ? (
+                  <div className="text-center py-8">
+                    <span className="text-gray-500">Loading your orders...</span>
+                  </div>
+                ) : orders.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-gray-600 mb-4">You haven't placed any orders yet.</p>
                     <Link
@@ -220,55 +252,94 @@ const UserProfile = () => {
                     {orders.map((order) => (
                       <div
                         key={order._id || order.id}
-                        className="border rounded-lg p-4 hover:shadow-lg transition-shadow"
+                        className="bg-white shadow-xl rounded-2xl p-6 mb-4 border border-gray-200"
                       >
-                        <div className="flex justify-between items-start mb-4">
+                        {/* Order Header */}
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-6 border-b pb-3">
                           <div>
-                            <p className="font-semibold">Order #{order._id?.slice(-6) || order.id}</p>
-                            <p className="text-sm text-gray-600">
+                            <span className="block text-lg font-bold text-gray-900">
+                              Order #{order._id?.slice(-6) || order.id}
+                            </span>
+                            <span className="text-sm text-gray-500">
                               Placed on {formatDate(order.createdAt)}
-                            </p>
+                            </span>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                            order.status === 'completed'
-                              ? 'bg-green-100 text-green-800'
-                              : order.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : order.status === 'cancelled'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
-                          </span>
+                          <div className="flex items-center gap-2 mt-2 md:mt-0">
+                            {(() => {
+                              // Friendly status label mapping
+                              const statusMap = {
+                                pending: { label: 'Processing', color: 'bg-yellow-100 text-yellow-800 border border-yellow-300' },
+                                completed: { label: 'Delivered', color: 'bg-green-100 text-green-800 border border-green-300' },
+                                shipped: { label: 'Shipped', color: 'bg-blue-100 text-blue-800 border border-blue-300' },
+                                cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-800 border border-red-300' },
+                              };
+                              const status = order.status || 'pending';
+                              const { label, color } = statusMap[status] || { label: status.charAt(0).toUpperCase() + status.slice(1), color: 'bg-gray-100 text-gray-800 border border-gray-300' };
+                              return (
+                                <span className={`inline-block px-4 py-1 rounded-full text-xs font-semibold tracking-wide shadow-sm ${color}`}>
+                                  {label}
+                                </span>
+                              );
+                            })()} 
+                          </div>
                         </div>
 
-                        <div className="space-y-3">
-                          {order.items?.map((item, idx) => (
-                            <div key={item._id || item.id || idx} className="flex items-center gap-4">
-                              <img
-                                src={item.image || item.book?.imageLinks?.thumbnail || item.book?.image || 'https://via.placeholder.com/64x80.png?text=No+Cover'}
-                                alt={item.title || item.book?.title || 'Book'}
-                                className="w-16 h-20 object-cover rounded"
-                                onError={(e) => {
-                                  e.target.onerror = null;
-                                  e.target.src = 'https://via.placeholder.com/64x80.png?text=No+Cover';
-                                }}
-                              />
-                              <div>
-                                <p className="font-medium">{item.title || item.book?.title || 'Unknown Title'}</p>
-                                <p className="text-sm text-gray-600">
-                                  Quantity: {item.quantity}
-                                </p>
-                                <p className="text-sm font-medium">₹{item.price}</p>
-                              </div>
+                        {/* Order Items */}
+                        <div className="divide-y divide-gray-100">
+                          {order.items?.map((item, idx) => {
+  let bookId = null;
+  if (typeof item.book === 'string' || typeof item.book === 'number') bookId = item.book;
+  else if (item.book && (item.book._id || item.book.id)) bookId = item.book._id || item.book.id;
+  const bookData = bookId && bookDetailsCache[bookId] ? bookDetailsCache[bookId] : (typeof item.book === 'object' ? item.book : {});
+  return (
+    <div key={item._id || item.id || idx} className="flex items-center py-4 gap-4">
+      <img
+        src={bookData.image || bookData.imageLinks?.thumbnail || 'https://via.placeholder.com/64x80.png?text=No+Cover'}
+        alt={bookData.title || 'Book'}
+        className="w-16 h-20 object-cover rounded-lg border border-gray-200 bg-gray-50"
+        onError={(e) => {
+          e.target.onerror = null;
+          e.target.src = 'https://via.placeholder.com/64x80.png?text=No+Cover';
+        }}
+      />
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-gray-900 truncate">
+          {bookData.title || 'Unknown Title'}
+        </p>
+        <div className="flex flex-wrap gap-4 mt-1 text-xs text-gray-600">
+          <span>Quantity: <span className="font-medium text-gray-800">{item.quantity}</span></span>
+          <span>Price: <span className="font-medium text-gray-800">₹{item.price}</span></span>
+        </div>
+      </div>
+    </div>
+  );
+})}
+
+                        </div>
+
+                        {/* Address & Payment Info */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                          <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-1">Delivery Address</h4>
+                            <div className="text-xs text-gray-600 bg-gray-50 rounded-lg p-3 border border-gray-100">
+                              {order.address?.streetAddress}<br />
+                              {order.address?.city}, {order.address?.state} - {order.address?.postalCode}<br />
+                              {order.address?.country}
                             </div>
-                          ))}
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-1">Payment Method</h4>
+                            <div className="text-xs text-gray-600 bg-gray-50 rounded-lg p-3 border border-gray-100">
+                              {order.paymentMethod || 'Cash on Delivery'}
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="mt-4 pt-4 border-t">
-                          <div className="flex justify-between">
-                            <span className="font-medium">Total Amount:</span>
-                            <span className="font-bold">₹{order.totalAmount}</span>
+                        {/* Total */}
+                        <div className="flex justify-end mt-6">
+                          <div className="text-right">
+                            <span className="block text-xs text-gray-500">Total Amount</span>
+                            <span className="text-xl font-bold text-blue-700">₹{Number(order.totalAmount).toFixed(2)}</span>
                           </div>
                         </div>
                       </div>

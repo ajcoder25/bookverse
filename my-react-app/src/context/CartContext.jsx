@@ -55,21 +55,35 @@ export const CartProvider = ({ children }) => {
   }, [fetchCart]);
 
   // Place order
-  const placeOrder = async (address) => {
+  const placeOrder = async (orderData) => {
     if (!cartItems.length) throw new Error('Cart is empty');
-    if (!address) throw new Error('Delivery address required');
-    const totalAmount = getCartTotal();
-    const items = cartItems.map(item => ({
-      book: typeof item.book === 'string' ? item.book : (item.book?._id || item.book?.id || item.book?.bookId || item._id || item.id || item.bookId),
-      quantity: item.quantity,
-      price: item.price
-    }));
-    // Remove _id from address before sending to backend
-    const { _id, ...addressForOrder } = address || {};
-    const payload = { items, address: addressForOrder, totalAmount };
-    console.log('Order payload:', payload);
-    console.log('Order items:', items);
-    return await orderService.placeOrder(payload);
+    if (!orderData) throw new Error('Order data is required');
+    
+    try {
+      // Make sure we have all required fields
+      if (!orderData.items || !orderData.address) {
+        throw new Error('Invalid order data');
+      }
+      
+      // Add user ID to the order data
+      const token = localStorage.getItem('userToken');
+      if (!token) throw new Error('User not authenticated');
+      
+      // Log the order data for debugging
+      console.log('Placing order with data:', orderData);
+      
+      // Call the order service to place the order
+      const response = await orderService.placeOrder(orderData);
+      
+      // Clear the cart after successful order
+      await clearCart();
+      
+      // Return the order confirmation
+      return response;
+    } catch (error) {
+      console.error('Error in placeOrder:', error);
+      throw error; // Re-throw to be handled by the component
+    }
   };
 
   // Add to cart with optimistic UI updates and proper sync

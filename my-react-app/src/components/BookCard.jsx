@@ -5,6 +5,10 @@ import { FaHeart, FaStar, FaShoppingCart } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
 const BookCard = ({ book, onAddToCart, onAddToWishlist, wishlist = [] }) => {
+  if (!book) {
+    console.warn('BookCard received undefined/null book:', book);
+    return null;
+  }
     // Compute wishlist status directly from props for each render
   // Defensive: compare both id and _id, handle both string and number
 // More robust: check all possible ID fields

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import BookCard from './BookCard';
 import bookService from '../services/bookService';
 import imageUtils from '../utils/imageUtils';
+import { useCart } from '../context/CartContext';
 
 const HeartIcon = ({ filled }) => (
   <svg
@@ -50,11 +51,13 @@ const getBestBookImage = (book) => {
   return imageUtils.getRandomFallbackImage();
 };
 
-const ExploreBooks = ({ onAddToCart, onAddToWishlist }) => {
+const ExploreBooks = ({ onAddToWishlist, wishlist = [] }) => {
+  const { addToCart } = useCart();
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [sortOrder, setSortOrder] = useState('low-high');
 
   const categories = [
     { name: 'All', value: 'all' },
@@ -71,52 +74,28 @@ const ExploreBooks = ({ onAddToCart, onAddToWishlist }) => {
 
   useEffect(() => {
     const fetchBooks = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        const query = searchQuery || (selectedCategory === 'all' ? 'bestsellers' : selectedCategory);
-        
-        const response = await bookService.searchBooks({
-          query: query,
-          maxResults: 20
-        });
-
-        if (response.books) {
-          // Filter books to only include those with valid image URLs
-          const validBooks = response.books.filter(book => {
-            const imageUrl = book.image || 
-                           book.imageLinks?.thumbnail || 
-                           book.imageLinks?.smallThumbnail ||
-                           book.volumeInfo?.imageLinks?.thumbnail ||
-                           book.volumeInfo?.imageLinks?.smallThumbnail;
-            
-            if (!imageUrl) return false;
-            
-            // Skip common placeholder patterns
-            const lowerUrl = String(imageUrl).toLowerCase();
-            const isPlaceholder = [
-              'no_cover', 'no-cover', 'nocover',
-              'not_available', 'not-available', 'notavailable',
-              'placeholder', 'default', 'no_image', 'noimage',
-              'no-img', 'no_img', 'none', 'null', 'undefined',
-              'editions/', 'content?', 'books/content?',
-              'googleusercontent', 'gstatic.com',
-              'via.placeholder.com', 'lorempixel.com', 'placehold.it',
-              'data:image', 'blank', 'empty', 'missing', 'broken',
-              '.svg', '.gif', 'dummyimage', 'placeimg', 'picsum', 'fakeimg'
-            ].some(term => lowerUrl.includes(term));
-            
-            return !isPlaceholder;
-          });
-          
-          setBooks(validBooks);
+        let books = [];
+        if (searchQuery) {
+          // Search by query
+          const response = await bookService.searchBooks(searchQuery, 20);
+          books = response?.items || response?.books || [];
+        } else if (selectedCategory === 'all') {
+          // All books: show featured/bestsellers
+          books = await bookService.getFeaturedBooks(20);
+        } else {
+          // By category
+          books = await bookService.getBooksByCategory(selectedCategory, 20);
         }
+        setBooks(books);
       } catch (error) {
+        setBooks([]);
         console.error('Error fetching books:', error);
       } finally {
         setLoading(false);
       }
     };
-
     fetchBooks();
   }, [searchQuery, selectedCategory]);
 
@@ -125,52 +104,29 @@ const ExploreBooks = ({ onAddToCart, onAddToWishlist }) => {
     // The useEffect will trigger a new search when searchQuery changes
   };
 
-  const BookCard = ({ book }) => (
-    <div className="flex flex-col items-center bg-white rounded-lg shadow-sm p-4 transition-shadow duration-200 hover:shadow-md">
-      <Link to={`/product/${book.id}`} className="group w-full">
-        <div className="flex flex-col items-center">
-          <img
-            src={getBestBookImage(book) || imageUtils.getRandomFallbackImage()}
-            alt={book.title}
-            style={{ width: '140px', height: '210px', objectFit: 'cover', borderRadius: '8px', margin: '0 auto', boxShadow: '0 2px 8px rgba(0,0,0,0.07)' }}
-            className="transition-transform duration-300 group-hover:scale-105"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = imageUtils.getRandomFallbackImage();
-            }}
-          />
-          <div className="w-full mt-3 text-center">
-            <h3 className="font-semibold text-base mb-1 group-hover:text-blue-600 transition-colors line-clamp-2 min-h-[2.5em]">{book.title}</h3>
-            <p className="text-xs text-gray-500 mb-1 line-clamp-1">{book.author}</p>
-          </div>
-          <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-            {book.description || book.volumeInfo?.description || 'No description available'}
-          </p>
-        </div>
-      </Link>
-      {/* Action Buttons */}
-      <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
-        <button
-          onClick={() => onAddToWishlist(book)}
-          className="bg-white rounded-full p-2 shadow hover:bg-pink-100 transition-colors"
-          aria-label="Add to Wishlist"
-        >
-          <HeartIcon filled={false} />
-        </button>
-        <button
-          onClick={() => onAddToCart(book)}
-          className="bg-blue-600 text-white rounded-full p-2 shadow hover:bg-blue-700 transition-colors"
-          aria-label="Add to Cart"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437m0 0L7.5 15.75A2.25 2.25 0 009.664 18h7.086a2.25 2.25 0 002.164-1.653l2.014-7.05A1.125 1.125 0 0019.875 7.5H6.272m-1.163 0l-.383-1.437m0 0L4.108 4.835A1.125 1.125 0 015.193 3H2.25m3.75 4.5h13.5" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
 
-  return (
+  // Sorting logic
+const sortedBooks = React.useMemo(() => {
+  if (!books) return [];
+  const getPrice = (book) => {
+    // Try to get the price from saleInfo, fallback to 0
+    if (book.saleInfo && book.saleInfo.retailPrice && book.saleInfo.retailPrice.amount)
+      return book.saleInfo.retailPrice.amount;
+    if (book.saleInfo && book.saleInfo.listPrice && book.saleInfo.listPrice.amount)
+      return book.saleInfo.listPrice.amount;
+    if (typeof book.price === 'number') return book.price;
+    return 0;
+  };
+  const sorted = [...books].sort((a, b) => {
+    const priceA = getPrice(a);
+    const priceB = getPrice(b);
+    if (sortOrder === 'low-high') return priceA - priceB;
+    else return priceB - priceA;
+  });
+  return sorted;
+}, [books, sortOrder]);
+
+return (
     <div>
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-purple-100 to-blue-100">
@@ -217,7 +173,10 @@ const ExploreBooks = ({ onAddToCart, onAddToWishlist }) => {
                 {categories.map((category) => (
                   <li key={category.value}>
                     <button
-                      onClick={() => setSelectedCategory(category.value)}
+                      onClick={() => {
+                        setSelectedCategory(category.value);
+                        setSearchQuery(''); // Clear search if changing category
+                      }}
                       className={`w-full text-left px-3 py-2 rounded-md ${selectedCategory === category.value ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
                     >
                       {category.name}
@@ -239,21 +198,56 @@ const ExploreBooks = ({ onAddToCart, onAddToWishlist }) => {
               </p>
             </div>
 
-            {loading ? (
-              <div className="flex justify-center items-center min-h-[400px]">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-              </div>
-            ) : books.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {books.map((book) => (
-                  <BookCard key={book.id} book={book} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">No books found. Try a different search or category.</p>
-              </div>
-            )}
+            {/* Price Sort UI */}
+<div className="flex items-center justify-end mb-6">
+  <div className="bg-white shadow rounded-lg px-4 py-2 flex items-center gap-4">
+    <span className="font-medium text-gray-700 mr-2">Sort by Price:</span>
+    <label className="inline-flex items-center cursor-pointer">
+      <input
+        type="radio"
+        className="form-radio text-blue-600"
+        name="sortPrice"
+        value="low-high"
+        checked={sortOrder === 'low-high'}
+        onChange={() => setSortOrder('low-high')}
+      />
+      <span className="ml-2 text-sm text-gray-700">Low to High</span>
+    </label>
+    <label className="inline-flex items-center cursor-pointer">
+      <input
+        type="radio"
+        className="form-radio text-blue-600"
+        name="sortPrice"
+        value="high-low"
+        checked={sortOrder === 'high-low'}
+        onChange={() => setSortOrder('high-low')}
+      />
+      <span className="ml-2 text-sm text-gray-700">High to Low</span>
+    </label>
+  </div>
+</div>
+
+{loading ? (
+  <div className="flex justify-center items-center min-h-[400px]">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+  </div>
+) : books.length > 0 ? (
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    {sortedBooks.map((book) => (
+      <BookCard
+        key={book.id || book._id}
+        book={book}
+        onAddToCart={addToCart}
+        onAddToWishlist={onAddToWishlist}
+        wishlist={wishlist || []}
+      />
+    ))}
+  </div>
+) : (
+  <div className="text-center py-12">
+    <p className="text-gray-500 text-lg">No books found. Try a different search or category.</p>
+  </div>
+)}
           </div>
         </div>
       </div>

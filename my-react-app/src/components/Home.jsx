@@ -88,23 +88,26 @@ const Home = ({ onAddToWishlist, wishlist = [] }) => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Category Filters - Centered */}
         <div className="mb-12 text-center">
-          <h2 className="text-2xl font-bold text-black font-sans mb-6">Browse by Category</h2>
-          <div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto">
-            {categories.map((category) => (
-              <button
-                key={category}
-                onClick={() => handleCategoryChange(category)}
-                className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${
-                  selectedCategory === category
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'bg-white text-gray-800 border border-gray-300 hover:bg-blue-50'
-                }`}
-              >
-                {category}
-              </button>
-            ))}
-          </div>
-        </div>
+  <h2 className="text-2xl font-bold text-black font-sans mb-6">Browse by Category</h2>
+  <div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto">
+    {categories.map((category) => (
+      <button
+        key={category}
+        onClick={() => handleCategoryChange(category)}
+        className={`
+          px-6 py-2 rounded-full text-base font-semibold focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-150
+          shadow-sm border
+          ${selectedCategory === category
+            ? 'bg-gradient-to-r from-blue-600 to-blue-400 text-white border-blue-600 scale-105 shadow-lg'
+            : 'bg-white text-gray-800 border-gray-300 hover:bg-blue-50 hover:border-blue-400'}
+        `}
+        aria-pressed={selectedCategory === category}
+      >
+        {category}
+      </button>
+    ))}
+  </div>
+</div>
 
         {/* Loading and Error States */}
         {loading ? (
