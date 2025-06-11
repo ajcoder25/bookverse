@@ -1,30 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-
-// Read .env file directly
-const envPath = path.resolve(__dirname, '../.env');
-
-
-try {
-  const envFile = fs.readFileSync(envPath, 'utf8');
-
-  // Parse the .env file manually
-  const envVars = envFile.split('\n').reduce((acc, line) => {
-    const match = line.match(/^([^=]+)=(.*)$/);
-    if (match) {
-      acc[match[1].trim()] = match[2].trim();
-    }
-    return acc;
-  }, {});
-  // Set environment variables manually
-  process.env = { ...process.env, ...envVars };
-} catch (error) {
-  console.error('Failed to read or parse .env file:', error);
-}
-
-
 const axios = require("axios");
 const config = require("../config");
+require('dotenv').config();
 
 const GOOGLE_BOOKS_API_URL = "https://www.googleapis.com/books/v1/volumes";
 const GOOGLE_BOOKS_API_KEY = process.env.GOOGLE_BOOKS_API_KEY || "";
