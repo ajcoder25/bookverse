@@ -1,8 +1,18 @@
-// Base URL for the backend API
-const API_BASE_URL = 'http://localhost:5000/api';
+// Base URL for the backend API - using environment variable
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://bookverse-1-9e7p.onrender.com/api';
 
-// Google Books API Key - make sure to replace with your actual key
-const API_KEY = 'YOUR_GOOGLE_BOOKS_API_KEY';
+// Google Books API Key - using environment variable
+const API_KEY = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY || 'YOUR_GOOGLE_BOOKS_API_KEY';
+
+// Common fetch options with CORS support
+const fetchOptions = {
+  mode: 'cors',
+  credentials: 'include',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  }
+};
 
 const bookService = {
   searchBooks: async (query, limit = 12) => {
@@ -12,15 +22,33 @@ const bookService = {
       
       // Use the external-books endpoint which is already set up in the backend
       const response = await fetch(
-        `${API_BASE_URL}/external-books/google?q=${encodeURIComponent(normalizedQuery)}&maxResults=${limit}`
+        `${API_BASE_URL}/external-books/google?q=${encodeURIComponent(normalizedQuery)}&maxResults=${limit}`,
+        {
+          ...fetchOptions,
+          method: 'GET'
+        }
       );
+      
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url,
+          error: errorData
+        });
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+      
       const data = await response.json();
       return data; // Return the full API response
     } catch (error) {
-      console.error('Error fetching books:', error);
+      console.error('Error in searchBooks:', {
+        error: error.message,
+        query,
+        limit,
+        API_BASE_URL
+      });
       throw error;
     }
   },

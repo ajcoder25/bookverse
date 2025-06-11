@@ -23,28 +23,43 @@ const externalBookRoutes = require("./routes/externalBookRoutes");
 const addressRoutes = require("./routes/addressRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 
-// Configure CORS
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'https://your-frontend-app.vercel.app' // Replace with your actual Vercel frontend URL
-];
-
+// Configure CORS - More permissive for development
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
+    // For development, allow all origins
+    if (process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
     }
-    return callback(null, true);
+    
+    // In production, only allow specific origins
+    const allowedOrigins = [
+      'https://bookverse-1-9e7p.onrender.com',
+      'https://your-frontend-domain.com' // Replace with your actual frontend domain
+    ];
+    
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    console.log('Blocked by CORS:', origin);
+    return callback(new Error('Not allowed by CORS'), false);
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'x-auth-token',
+    'x-requested-with'
+  ],
+  credentials: true,
+  optionsSuccessStatus: 200
 };
+
+// Log CORS configuration for debugging
+console.log('CORS Configuration:', {
+  NODE_ENV: process.env.NODE_ENV,
+  CORS_ORIGIN: process.env.CORS_ORIGIN
+});
 
 app.use(cors(corsOptions));
 app.use(express.json());
