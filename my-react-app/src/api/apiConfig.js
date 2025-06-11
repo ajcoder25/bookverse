@@ -1,7 +1,8 @@
 import axios from "axios";
 
-// Configure axios defaults
-axios.defaults.baseURL = "http://localhost:5000/api";
+// Set the base URL for all API requests
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://bookverse-1-9e7p.onrender.com/api';
+axios.defaults.baseURL = API_BASE_URL;
 
 // Add request interceptor for common headers
 axios.interceptors.request.use(

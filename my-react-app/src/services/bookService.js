@@ -1,12 +1,12 @@
 import axios from 'axios';
 
-// Use environment variable for API base URL or default to local development
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+// Use environment variable for API base URL or default to Render URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://bookverse-1-9e7p.onrender.com/api';
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: API_BASE_URL + '/api', // Add /api here to avoid duplication
-  withCredentials: false,
+  baseURL: API_BASE_URL, // Already includes /api
+  withCredentials: true, // Changed to true for CORS with credentials
   timeout: 15000, // 15 second timeout
   headers: {
     'Content-Type': 'application/json',
