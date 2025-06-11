@@ -27,18 +27,27 @@ const cartRoutes = require("./routes/cartRoutes");
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  'https://bookverse-frontend.vercel.app',
-  'https://bookverse-j177z3wb4-ajcoder25-gmailcoms-projects.vercel.app',
-  'https://bookverse-pink.vercel.app', // <-- Your new deployed Vercel frontend
+  'https://bookverse-pink.vercel.app',
 ];
+
+// Regex to match any Vercel preview/branch deployment for this project
+const vercelPreviewRegex = /^https:\/\/bookverse-[a-z0-9-]+\.vercel\.app$/;
 
 const corsOptions = {
   origin: function (origin, callback) {
-    console.log("CORS Origin:", origin); // For debugging
+    console.log('CORS Origin:', origin);
+    // In non-production (Render preview) allow everything for convenience
     if (process.env.NODE_ENV !== 'production') {
-      return callback(null, true); // Allow all origins in development
+      return callback(null, true);
     }
-    if (!origin || allowedOrigins.includes(origin)) {
+
+    // Allow requests with no origin (e.g., curl, health-check)
+    if (!origin) return callback(null, true);
+
+    if (
+      allowedOrigins.includes(origin) ||
+      vercelPreviewRegex.test(origin)
+    ) {
       return callback(null, true);
     }
     return callback(new Error('Not allowed by CORS'), false);
