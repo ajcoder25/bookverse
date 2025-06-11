@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // Set the base URL for all API requests
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://bookverse-1-9e7p.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://bookverse-69wl.onrender.com/api';
 axios.defaults.baseURL = API_BASE_URL;
 
 // Add request interceptor for common headers

@@ -1,5 +1,5 @@
 // Base URL for the backend API - using environment variable
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://bookverse-1-9e7p.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://bookverse-69wl.onrender.com/api';
 
 // Google Books API Key - using environment variable
 const API_KEY = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY || 'YOUR_GOOGLE_BOOKS_API_KEY';

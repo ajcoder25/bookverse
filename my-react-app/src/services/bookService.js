@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Use environment variable for API base URL or default to Render URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://bookverse-1-9e7p.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://bookverse-69wl.onrender.com/api';
 
 // Create axios instance with default config
 const api = axios.create({
