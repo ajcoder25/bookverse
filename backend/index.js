@@ -28,6 +28,8 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'https://bookverse-pink.vercel.app',
+  'https://bookverse-blue.vercel.app',
+  'https://bookverse-green.vercel.app',
 ];
 
 // Regex to match any Vercel preview/branch deployment for this project
