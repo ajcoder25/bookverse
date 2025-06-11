@@ -27,7 +27,8 @@ const cartRoutes = require("./routes/cartRoutes");
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  'https://bookverse-frontend.vercel.app', // Update to your actual Vercel frontend if different
+  'https://bookverse-frontend.vercel.app', // Keep if needed
+  'https://bookverse-j177z3wb4-ajcoder25-gmailcoms-projects.vercel.app', // <-- Your actual deployed Vercel frontend
 ];
 
 const corsOptions = {
