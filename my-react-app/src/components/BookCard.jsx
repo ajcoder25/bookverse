@@ -1,10 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FaHeart, FaStar, FaShoppingCart } from 'react-icons/fa';
-
 
 import toast from 'react-hot-toast';
 
 const BookCard = ({ book, onAddToCart, onAddToWishlist, wishlist = [] }) => {
+  const navigate = useNavigate();
   if (!book) {
     console.warn('BookCard received undefined/null book:', book);
     return null;
@@ -123,8 +124,8 @@ const isWishlisted = wishlist.some(
   const handleBookClick = (e) => {
     e.preventDefault();
     console.log('Book data:', book);
-    // Navigate to the product page
-    window.location.href = `/product/${book.id || book._id || ''}`;
+    // Navigate to the product page using React Router without full page reload
+    navigate(`/product/${book.id || book._id || ''}`);
   };
 
   return (
